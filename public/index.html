@@ -499,7 +499,7 @@
       <div class="progress-indicator" aria-live="polite">
         <span class="num" id="progress-num">01</span>
         <span class="bar" id="progress-bar"></span>
-        <span>12</span>
+        <span class="total" id="progress-total">00</span>
       </div>
     </header>
 
@@ -1265,8 +1265,12 @@
   function cacheUIRefs() {
     uiRefs.progressNum = document.getElementById('progress-num');
     uiRefs.progressBar = document.getElementById('progress-bar');
+    uiRefs.progressTotal = document.getElementById('progress-total');
     uiRefs.hero = document.querySelector('.hero');
     uiRefs.scrollHint = document.getElementById('scroll-hint');
+    if (uiRefs.progressTotal) {
+      uiRefs.progressTotal.textContent = String(projectCount).padStart(2, '0');
+    }
   }
 
   function boot() {
