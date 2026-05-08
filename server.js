@@ -97,9 +97,9 @@ async function handleRequest(req, res) {
   const fallbackFile = join(publicDir, 'index.html');
   const filePath = staticFile?.filePath || fallbackFile;
   const fallbackStat = staticFile ? null : await stat(fallbackFile).catch(() => null);
-  const size = staticFile?.size || fallbackStat?.size;
+  const size = staticFile?.size ?? fallbackStat?.size;
 
-  if (!size) {
+  if (size == null) {
     return sendText(res, 404, 'Not Found');
   }
 
