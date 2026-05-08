@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Helix Projects — Spatial Gallery (Print)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-0: #05060a;
+    --bg-1: #0b0e16;
+    --fg-0: #e8ecf4;
+    --fg-1: #9aa3b8;
+    --accent: #c5d6ff;
+    --accent-warm: #ffd2b8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #04050a;
+    color: var(--fg-0);
+    font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Page = 16:9 landscape for screen preview; @page sets the actual print canvas. */
+  .page {
+    width: 297mm;
+    height: 167mm;            /* ~16:9 inside A4 landscape with 0.5cm margins */
+    margin: 12px auto;
+    padding: 18mm 22mm;
+    background: radial-gradient(1200px 800px at 50% 10%, #1a2138 0%, #0a0d16 55%, #04050a 100%), #04050a;
+    color: var(--fg-0);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.04);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page + .page { break-before: page; }
+
+  /* --- Cover ---------------------------------------------------------- */
+  .cover {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100%;
+  }
+  .cover-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-1);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--fg-0); }
+  .brand-mark {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: conic-gradient(from 90deg, #c5d6ff, #6b85d6, #c5d6ff);
+    box-shadow: 0 0 14px rgba(160,190,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.3);
+  }
+  .cover-body {
+    display: flex; flex-direction: column; justify-content: center;
+    max-width: 80%;
+  }
+  .cover-eyebrow {
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--fg-1); margin-bottom: 22px;
+  }
+  .cover-title {
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-weight: 300;
+    font-size: 84px;
+    line-height: 1.0;
+    letter-spacing: -0.015em;
+    margin: 0 0 24px;
+    color: var(--fg-0);
+  }
+  .cover-title em {
+    font-style: italic;
+    background: linear-gradient(90deg, #c5d6ff, #ffd2b8);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .cover-lede {
+    font-size: 16px; line-height: 1.55;
+    color: rgba(232,236,244,0.78);
+    max-width: 620px;
+    margin: 0;
+  }
+  .cover-foot {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-1);
+  }
+  .cover-foot .meta-stack { display: grid; gap: 4px; }
+  .cover-foot strong { color: var(--fg-0); font-weight: 500; }
+
+  /* --- Index page ----------------------------------------------------- */
+  .index {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 14mm;
+    height: 100%;
+  }
+  .section-eyebrow {
+    font-size: 10.5px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--fg-1);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .section-eyebrow h2 {
+    font-family: "Fraunces", serif; font-weight: 300;
+    font-size: 22px; letter-spacing: -0.005em;
+    color: var(--fg-0);
+    margin: 0;
+  }
+  .index-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 26px;
+    align-content: start;
+  }
+  .index-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-variant-numeric: tabular-nums;
+  }
+  .index-row .num {
+    font-size: 11px; color: var(--fg-1);
+    letter-spacing: 0.1em;
+  }
+  .index-row .ttl {
+    font-size: 13px; color: var(--fg-0);
+    letter-spacing: -0.005em;
+  }
+  .index-row .ttl small {
+    display: block;
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(232,236,244,0.55);
+    margin-top: 3px;
+    font-variant-numeric: normal;
+  }
+  .index-row .yr {
+    font-size: 10.5px; letter-spacing: 0.12em;
+    color: rgba(232,236,244,0.6);
+  }
+
+  /* --- Project page --------------------------------------------------- */
+  .project {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 0 14mm;
+    height: 100%;
+  }
+  .project-head {
+    grid-column: 1 / -1;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-1);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 14px;
+    margin-bottom: 14mm;
+  }
+  .project-head .crumb { color: var(--fg-0); }
+  .hero-card {
+    aspect-ratio: 16 / 11;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.10);
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 18px 40px -12px rgba(0,0,0,0.55),
+      inset 0 1px 0 rgba(255,255,255,0.10);
+    align-self: start;
+  }
+  .hero-card::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 80% at 30% 20%, rgba(255,255,255,0.18), transparent 50%),
+      linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.32));
+  }
+  .hero-card .index-pill {
+    position: absolute; top: 16px; left: 16px;
+    font-size: 10px; letter-spacing: 0.18em;
+    color: rgba(232,236,244,0.85);
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-card .status-pill {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 999px;
+    background: rgba(10,14,22,0.55);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(232,236,244,0.92);
+  }
+  .hero-card .status-pill[data-tone="warm"] { color: #ffd2b8; border-color: rgba(255,210,184,0.55); }
+  .hero-card .status-pill[data-tone="cool"] { color: #c5d6ff; border-color: rgba(197,214,255,0.55); }
+  .hero-card .status-pill[data-tone="muted"]{ color: rgba(232,236,244,0.7); }
+
+  .project-copy { display: flex; flex-direction: column; }
+  .project-eyebrow {
+    font-size: 10.5px; letter-spacing: 0.20em; text-transform: uppercase;
+    color: var(--fg-1);
+    margin-bottom: 14px;
+  }
+  .project-title {
+    font-family: "Fraunces", serif;
+    font-weight: 300;
+    font-size: 46px;
+    line-height: 1.05;
+    letter-spacing: -0.012em;
+    margin: 0 0 18px;
+  }
+  .project-desc {
+    font-size: 13.5px; line-height: 1.6;
+    color: rgba(232,236,244,0.82);
+    margin: 0 0 26px;
+    max-width: 52ch;
+    text-wrap: pretty;
+  }
+  .project-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 26px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 18px;
+    margin-top: auto;
+  }
+  .project-grid dt {
+    font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-1); margin-bottom: 4px;
+  }
+  .project-grid dd {
+    margin: 0; font-size: 13px; color: var(--fg-0);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .page-foot {
+    position: absolute;
+    left: 22mm; right: 22mm; bottom: 10mm;
+    display: flex; justify-content: space-between;
+    font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: rgba(232,236,244,0.45);
+  }
+
+  /* --- Print rules ---------------------------------------------------- */
+  @page { size: A4 landscape; margin: 0.5cm; }
+  @media print {
+    html, body { background: #04050a; }
+    .page {
+      margin: 0;
+      width: 100%;
+      height: 100vh;
+      border: none;
+      box-shadow: none;
+      page-break-after: always;
+      break-after: page;
+    }
+    .page:last-child { page-break-after: auto; break-after: auto; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Cover -->
+  <section class="page cover">
+    <div class="cover-head">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Helix Projects</span>
+      </div>
+      <div>Spatial Gallery · Catalogue 2026</div>
+    </div>
+    <div class="cover-body">
+      <div class="cover-eyebrow">Volume 01 — Selected Work</div>
+      <h1 class="cover-title">Twelve projects, arranged as a <em>turning ribbon</em>.</h1>
+      <p class="cover-lede">A printed companion to the spatial gallery — each chapter on its own page, in the order it appears as you scroll the helix.</p>
+    </div>
+    <div class="cover-foot">
+      <div class="meta-stack">
+        <span>Catalogue</span>
+        <strong>12 projects · 2022 – 2026</strong>
+      </div>
+      <div class="meta-stack" style="text-align:right;">
+        <span>Edition</span>
+        <strong>Print companion</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- Index -->
+  <section class="page index">
+    <div class="section-eyebrow">
+      <h2>Index</h2>
+      <span>Twelve entries</span>
+    </div>
+    <div class="index-grid" id="index-grid"></div>
+    <div class="page-foot"><span>Helix Projects</span><span>02</span></div>
+  </section>
+
+  <!-- Project pages (generated) -->
+  <div id="project-pages"></div>
+
+  <script>
+    const projectData = [
+      { title: 'Orbital Identity',  category: 'Branding',         year: 2026, status: 'Live',     hue: 220, hue2: 280 },
+      { title: 'Signal Atlas',      category: 'Data Interface',   year: 2026, status: 'New',      hue: 200, hue2: 160 },
+      { title: 'Neon Archive',      category: 'Web Experience',   year: 2025, status: 'Live',     hue: 300, hue2: 250 },
+      { title: 'Glass Engine',      category: 'Product Design',   year: 2025, status: 'Live',     hue: 180, hue2: 220 },
+      { title: 'Echo Commerce',     category: 'E-Commerce',       year: 2025, status: 'Live',     hue: 30,  hue2: 350 },
+      { title: 'Kinetic Lab',       category: 'Motion System',    year: 2024, status: 'Archive',  hue: 320, hue2: 260 },
+      { title: 'Lunar CRM',         category: 'SaaS Dashboard',   year: 2024, status: 'Live',     hue: 240, hue2: 200 },
+      { title: 'Aether Notes',      category: 'Editorial System', year: 2024, status: 'Live',     hue: 160, hue2: 200 },
+      { title: 'Pulse Grid',        category: 'Analytics',        year: 2023, status: 'Archive',  hue: 0,   hue2: 320 },
+      { title: 'Magnetic Studio',   category: 'Portfolio',        year: 2023, status: 'Live',     hue: 60,  hue2: 30 },
+      { title: 'Soft Machines',     category: 'AI Interface',     year: 2023, status: 'Live',     hue: 260, hue2: 220 },
+      { title: 'Future Index',      category: 'Research Platform',year: 2022, status: 'Archive',  hue: 140, hue2: 180 },
+    ];
+    const descriptions = [
+      'A modular identity system for an aerospace consortium — typographic marks orbit a fixed nucleus, generating dynamic compositions for every touchpoint.',
+      'A dense data interface for monitoring telemetry across distributed networks. Every density level surfaces a different conversation between operator and signal.',
+      'An archival web experience built around a rotating index of cultural artefacts, lit only by the glow of the screens that catalogue them.',
+      'Design language for a hardware-software product where the surface is the interface — light pipes, capacitive zones, and motion as confirmation.',
+      'A commerce platform that treats checkout as a sequence of confident, quiet moments. Animation as guidance, not decoration.',
+      'A motion system codifying timing, easing, and choreography across a multi-product suite. Twelve curves do most of the work.',
+      'A scheduling and CRM dashboard for night-shift operations. High contrast at low brightness, no surface above 18% luminance.',
+      'An editorial system for long-form research — type-first, image-second, with quiet generative covers per issue.',
+      'A real-time analytics surface where breath and rhythm replace charts. Patterns emerge from the cadence rather than the axes.',
+      'A studio portfolio rebuilt around a magnetic cursor and lensed previews. Browsing feels like walking a gallery.',
+      'A control panel for tuning autonomous models — soft dials, ranged states, every change visualised as a pulse.',
+      'A research platform indexing emerging futures across domains. Long-form, citation-aware, persistently open.',
+    ];
+
+    function thumbBg(p, i) {
+      const a = `hsl(${p.hue}, 72%, 56%)`;
+      const b = `hsl(${p.hue2}, 68%, 42%)`;
+      const c = `hsl(${(p.hue + 30) % 360}, 60%, 22%)`;
+      const styles = [
+        `radial-gradient(120% 90% at 30% 20%, ${a} 0%, ${b} 45%, ${c} 100%)`,
+        `linear-gradient(135deg, ${a} 0%, ${c} 100%), radial-gradient(60% 50% at 70% 80%, ${b}, transparent)`,
+        `conic-gradient(from 220deg at 60% 40%, ${a}, ${b}, ${c}, ${a})`,
+        `radial-gradient(80% 60% at 80% 20%, ${a}, transparent 60%), linear-gradient(180deg, ${c}, ${b})`,
+        `linear-gradient(160deg, ${a} 0%, ${b} 50%, ${c} 100%)`,
+        `radial-gradient(70% 70% at 20% 80%, ${a}, transparent 65%), linear-gradient(135deg, ${b}, ${c})`,
+      ];
+      return styles[i % styles.length];
+    }
+    function tone(s){ return s === 'New' ? 'cool' : s === 'Live' ? 'warm' : s === 'Archive' ? 'muted' : ''; }
+
+    // Index
+    const indexGrid = document.getElementById('index-grid');
+    projectData.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'index-row';
+      row.innerHTML = `
+        <span class="num">${String(i+1).padStart(2,'0')}</span>
+        <span class="ttl">${p.title}<small>${p.category}</small></span>
+        <span class="yr">${p.year}</span>
+      `;
+      indexGrid.appendChild(row);
+    });
+
+    // Pages
+    const host = document.getElementById('project-pages');
+    projectData.forEach((p, i) => {
+      const idx = String(i+1).padStart(2,'0');
+      const total = String(projectData.length).padStart(2,'0');
+      const pg = String(i+3).padStart(2,'0'); // cover=01, index=02, projects start 03
+      const page = document.createElement('section');
+      page.className = 'page';
+      page.innerHTML = `
+        <div class="project">
+          <div class="project-head">
+            <span class="crumb">Helix Projects</span>
+            <span>${idx} / ${total}</span>
+          </div>
+          <div class="hero-card" style="background: ${thumbBg(p, i)};">
+            <div class="index-pill">${idx}</div>
+            <div class="status-pill" data-tone="${tone(p.status)}">${p.status}</div>
+          </div>
+          <div class="project-copy">
+            <div class="project-eyebrow">${idx} — ${p.category}</div>
+            <h3 class="project-title">${p.title}</h3>
+            <p class="project-desc">${descriptions[i]}</p>
+            <dl class="project-grid">
+              <div><dt>Category</dt><dd>${p.category}</dd></div>
+              <div><dt>Year</dt><dd>${p.year}</dd></div>
+              <div><dt>Status</dt><dd>${p.status}</dd></div>
+              <div><dt>Position</dt><dd>${i+1} of ${projectData.length}</dd></div>
+            </dl>
+          </div>
+        </div>
+        <div class="page-foot"><span>Helix Projects</span><span>${pg}</span></div>
+      `;
+      host.appendChild(page);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,627 @@
+--- Helix Projects.html
++++ Helix Projects.optimized.html
+@@ -4,6 +4,11 @@
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+ <title>Helix Projects — Spatial Gallery</title>
++<meta name="description" content="Helix Projects is a performant spatial portfolio gallery with an accessible fallback list." />
++<meta name="theme-color" content="#05060a" />
++<link rel="preconnect" href="https://unpkg.com" crossorigin />
++<link rel="modulepreload" href="https://unpkg.com/three@0.160.0/build/three.module.js" crossorigin />
++<link rel="modulepreload" href="https://unpkg.com/three@0.160.0/examples/jsm/renderers/CSS3DRenderer.js" crossorigin />
+ <style>
+   :root {
+     --bg-0: #05060a;
+@@ -15,6 +20,7 @@
+   }
+ 
+   * { box-sizing: border-box; }
++  html { color-scheme: dark; }
+   html, body {
+     margin: 0;
+     padding: 0;
+@@ -23,6 +29,7 @@
+     font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+     -webkit-font-smoothing: antialiased;
+     overflow-x: hidden;
++    text-rendering: optimizeLegibility;
+   }
+ 
+   body {
+@@ -39,8 +46,8 @@
+     z-index: 1;
+     pointer-events: none; /* lets page scroll; cards re-enable */
+   }
+-  .scene-host canvas { display: block; width: 100%; height: 100%; }
+-  .css3d-host { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
++  .scene-host canvas { display: block; width: 100%; height: 100%; contain: strict; }
++  .css3d-host { position: fixed; inset: 0; z-index: 2; pointer-events: none; contain: layout style paint; }
+   .css3d-host > div { pointer-events: none; }
+ 
+   /* Soft vignette */
+@@ -214,22 +221,26 @@
+     background:
+       linear-gradient(140deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 60%, rgba(255,255,255,0.06) 100%);
+     border: 1px solid rgba(255,255,255,0.13);
+-    backdrop-filter: blur(18px);
+-    -webkit-backdrop-filter: blur(18px);
++    background-color: rgba(17, 22, 35, 0.64);
++    backdrop-filter: blur(10px);
++    -webkit-backdrop-filter: blur(10px);
+     box-shadow:
+       0 18px 50px -10px rgba(0,0,0,0.55),
+       inset 0 1px 0 rgba(255,255,255,0.10),
+       inset 0 0 0 1px rgba(255,255,255,0.02);
+     overflow: hidden;
+     cursor: pointer;
++    backface-visibility: hidden;
++    transform-style: preserve-3d;
++    will-change: transform, opacity, filter;
+     pointer-events: auto;
+     transform: scale(var(--scale, 0.85));
+     opacity: var(--opacity, 0.5);
+-    filter: blur(var(--blur, 1.4px)) brightness(var(--bright, 0.78));
++    filter: brightness(var(--bright, 0.78));
+     transition:
+       transform 380ms cubic-bezier(.22,.8,.2,1),
+       opacity 380ms ease,
+-      filter 380ms ease,
++      filter 260ms ease,
+       box-shadow 380ms ease,
+       border-color 380ms ease;
+   }
+@@ -422,6 +433,36 @@
+   .fallback p { color: var(--fg-1); max-width: 420px; line-height: 1.55; }
+   .fallback.show { display: flex; }
+ 
++
++  .fallback-list {
++    width: min(760px, 92vw);
++    max-height: 44vh;
++    overflow: auto;
++    margin-top: 18px;
++    display: grid;
++    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
++    gap: 10px;
++  }
++  .fallback-card {
++    text-align: left;
++    padding: 12px 14px;
++    border: 1px solid rgba(255,255,255,0.10);
++    border-radius: 14px;
++    background: rgba(255,255,255,0.045);
++  }
++  .fallback-card strong {
++    display: block;
++    font-size: 13px;
++    margin-bottom: 4px;
++  }
++  .fallback-card span {
++    display: block;
++    color: var(--fg-1);
++    font-size: 11px;
++    letter-spacing: 0.08em;
++    text-transform: uppercase;
++  }
++
+   /* Mobile */
+   @media (max-width: 720px) {
+     header.app-header { padding: 16px 18px; }
+@@ -436,7 +477,8 @@
+ 
+   @media (prefers-reduced-motion: reduce) {
+     .scroll-hint .line { animation: none; }
+-    .card { transition: none; }
++    .card { transition: none; filter: none; }
++    .vignette { background: rgba(0,0,0,0.25); }
+   }
+ </style>
+ </head>
+@@ -497,10 +539,42 @@
+   <!-- Fallback if Three.js fails -->
+   <div class="fallback" id="fallback">
+     <h2>Spatial gallery unavailable</h2>
+-    <p>The 3D experience couldn't initialise on this device. We're showing a simplified list view in its place — scroll to browse the projects.</p>
++    <p>The 3D experience couldn't initialise on this device. Browse the simplified project list below.</p>
++    <div class="fallback-list" aria-label="Project list">
++      <article class="fallback-card"><strong>Orbital Identity</strong><span>Branding · 2026 · Live</span></article>
++      <article class="fallback-card"><strong>Signal Atlas</strong><span>Data Interface · 2026 · New</span></article>
++      <article class="fallback-card"><strong>Neon Archive</strong><span>Web Experience · 2025 · Live</span></article>
++      <article class="fallback-card"><strong>Glass Engine</strong><span>Product Design · 2025 · Live</span></article>
++      <article class="fallback-card"><strong>Echo Commerce</strong><span>E-Commerce · 2025 · Live</span></article>
++      <article class="fallback-card"><strong>Kinetic Lab</strong><span>Motion System · 2024 · Archive</span></article>
++      <article class="fallback-card"><strong>Lunar CRM</strong><span>SaaS Dashboard · 2024 · Live</span></article>
++      <article class="fallback-card"><strong>Aether Notes</strong><span>Editorial System · 2024 · Live</span></article>
++      <article class="fallback-card"><strong>Pulse Grid</strong><span>Analytics · 2023 · Archive</span></article>
++      <article class="fallback-card"><strong>Magnetic Studio</strong><span>Portfolio · 2023 · Live</span></article>
++      <article class="fallback-card"><strong>Soft Machines</strong><span>AI Interface · 2023 · Live</span></article>
++      <article class="fallback-card"><strong>Future Index</strong><span>Research Platform · 2022 · Archive</span></article>
++    </div>
+   </div>
+ 
+-  <script type="importmap">
++  <script>
++  window.__helixBooted = false;
++  window.__showHelixFallback = function () {
++    var fallback = document.getElementById('fallback');
++    if (fallback) fallback.classList.add('show');
++  };
++  window.addEventListener('error', function (event) {
++    var target = event && event.target;
++    var isScriptOrModuleFailure = target && (target.tagName === 'SCRIPT' || target.rel === 'modulepreload');
++    if (isScriptOrModuleFailure || /module|import|three/i.test(String(event && event.message || ''))) {
++      window.__showHelixFallback();
++    }
++  }, true);
++  setTimeout(function () {
++    if (!window.__helixBooted) window.__showHelixFallback();
++  }, 3500);
++</script>
++
++<script type="importmap">
+   {
+     "imports": {
+       "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+@@ -551,7 +625,8 @@
+   ];
+ 
+   const projectCount = projectData.length;
+-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
++  const saveData = Boolean(navigator.connection?.saveData);
++  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches || saveData;
+ 
+   /* ---------------------------------------------------------------------
+    * Helix layout constants
+@@ -563,13 +638,19 @@
+   let CARD_OUT_OFFSET = 30;
+   let CARD_VERTICAL_OFFSET = 0;
+ 
++  function getResponsiveMode() {
++    if (innerWidth < 720) return 'compact';
++    if (innerWidth < 1100) return 'medium';
++    return 'desktop';
++  }
++
+   function applyResponsiveSizing() {
+-    const w = innerWidth;
+-    if (w < 720) {
++    const mode = getResponsiveMode();
++    if (mode === 'compact') {
+       HELIX_RADIUS = 230;
+       HELIX_HEIGHT = 1300;
+       CARD_OUT_OFFSET = 20;
+-    } else if (w < 1100) {
++    } else if (mode === 'medium') {
+       HELIX_RADIUS = 310;
+       HELIX_HEIGHT = 1500;
+       CARD_OUT_OFFSET = 26;
+@@ -578,6 +659,7 @@
+       HELIX_HEIGHT = 1700;
+       CARD_OUT_OFFSET = 30;
+     }
++    return mode;
+   }
+ 
+   // Param helix position in helix-local space (before group rotation)
+@@ -602,6 +684,76 @@
+   let targetMouseX = 0, targetMouseY = 0;
+   let mouseX = 0, mouseY = 0;
+   let cameraTargetY = HELIX_HEIGHT / 2;
++  let currentResponsiveMode = '';
++  let resizeRaf = 0;
++  let animationId = 0;
++  let renderActive = false;
++  let isPageVisible = !document.hidden;
++  let lastProgressUI = '';
++  let lastFadeUI = '';
++  let lastActiveUI = -1;
++  let navButtons = [];
++  let lastFocusedElement = null;
++  const uiRefs = {};
++  const EPS = 0.0012;
++  const MOUSE_EPS = 0.003;
++
++  function getPixelRatioLimit() {
++    if (reducedMotion) return 1;
++    if (innerWidth < 720) return 1.15;
++    if (innerWidth < 1100) return 1.35;
++    return 1.5;
++  }
++
++  function resizeRenderers() {
++    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, getPixelRatioLimit()));
++    renderer.setSize(innerWidth, innerHeight, false);
++    cssRenderer.setSize(innerWidth, innerHeight);
++  }
++
++  function invalidate() {
++    if (!isPageVisible) return;
++    if (!renderActive) {
++      renderActive = true;
++      animationId = requestAnimationFrame(animate);
++    }
++  }
++
++  function clearThreeObject(obj) {
++    obj.traverse((child) => {
++      if (child.geometry) child.geometry.dispose();
++      if (child.material) {
++        const materials = Array.isArray(child.material) ? child.material : [child.material];
++        materials.forEach((mat) => mat && mat.dispose && mat.dispose());
++      }
++    });
++  }
++
++  function clearGroup(group) {
++    if (!group) return;
++    while (group.children.length) {
++      const child = group.children[0];
++      clearThreeObject(child);
++      group.remove(child);
++    }
++  }
++
++  function rebuildHelixLayout() {
++    clearGroup(helixGroup);
++    if (cssHelixGroup) {
++      while (cssHelixGroup.children.length) {
++        const child = cssHelixGroup.children[0];
++        if (child.element && child.element.remove) child.element.remove();
++        cssHelixGroup.remove(child);
++      }
++    }
++    cardObjects.length = 0;
++    createHelix();
++    createProjectCards();
++    cameraTargetY = HELIX_HEIGHT / 2 - currentProgress * HELIX_HEIGHT;
++    lastActiveUI = -1;
++    invalidate();
++  }
+ 
+   /* ---------------------------------------------------------------------
+    * initScene — renderer, camera, lights, scenes
+@@ -614,14 +766,17 @@
+     camera.position.set(0, HELIX_HEIGHT / 2, 1180);
+ 
+     const canvas = document.getElementById('webgl');
+-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+-    renderer.setSize(innerWidth, innerHeight, false);
++    renderer = new THREE.WebGLRenderer({
++      canvas,
++      antialias: !reducedMotion && innerWidth >= 720,
++      alpha: true,
++      powerPreference: 'high-performance',
++    });
+     renderer.setClearColor(0x000000, 0);
+ 
+     cssScene = new THREE.Scene();
+     cssRenderer = new CSS3DRenderer();
+-    cssRenderer.setSize(innerWidth, innerHeight);
++    resizeRenderers();
+     const cssHost = document.getElementById('css3d');
+     cssHost.appendChild(cssRenderer.domElement);
+     cssRenderer.domElement.style.position = 'absolute';
+@@ -656,8 +811,8 @@
+    * outward as it twists down the helix.
+    * ------------------------------------------------------------------- */
+   function createHelix() {
+-    const segments = 480;
+-    const ribbonWidth = 30;
++    const segments = reducedMotion || innerWidth < 720 ? 280 : innerWidth < 1100 ? 340 : 400;
++    const ribbonWidth = innerWidth < 720 ? 24 : 30;
+     const positions = [];
+     const indices = [];
+     const uvs = [];
+@@ -722,12 +877,13 @@
+ 
+     // Subtle glow tube around the spine
+     const curvePoints = [];
+-    for (let i = 0; i <= 200; i++) {
+-      const p = getHelixPos(i / 200);
++    const spineSamples = reducedMotion || innerWidth < 720 ? 120 : 170;
++    for (let i = 0; i <= spineSamples; i++) {
++      const p = getHelixPos(i / spineSamples);
+       curvePoints.push(new THREE.Vector3(p.x, p.y, p.z));
+     }
+     const spineCurve = new THREE.CatmullRomCurve3(curvePoints);
+-    const spineGeom = new THREE.TubeGeometry(spineCurve, 240, 1.4, 8, false);
++    const spineGeom = new THREE.TubeGeometry(spineCurve, Math.round(spineSamples * 0.9), 1.4, 6, false);
+     const spineMat = new THREE.MeshBasicMaterial({
+       color: 0x9bb6ff,
+       transparent: true,
+@@ -743,7 +899,7 @@
+    * createParticles — floating dust in space
+    * ------------------------------------------------------------------- */
+   function createParticles() {
+-    const count = reducedMotion ? 120 : 420;
++    const count = reducedMotion ? 80 : innerWidth < 720 ? 140 : innerWidth < 1100 ? 220 : 300;
+     const positions = new Float32Array(count * 3);
+     const sizes = new Float32Array(count);
+     for (let i = 0; i < count; i++) {
+@@ -843,7 +999,17 @@
+       obj.lookAt(0, obj.position.y, 0);
+ 
+       cssHelixGroup.add(obj);
+-      cardObjects.push({ obj, el: card, baseAngle: pos.angle, t, basePos: { ...pos, nx, nz } });
++      cardObjects.push({
++        obj,
++        el: card,
++        baseAngle: pos.angle,
++        t,
++        basePos: { ...pos, nx, nz },
++        lastScale: '',
++        lastOpacity: '',
++        lastBright: '',
++        lastActive: null,
++      });
+     });
+   }
+ 
+@@ -856,6 +1022,7 @@
+       const b = document.createElement('button');
+       b.type = 'button';
+       b.setAttribute('aria-label', `Go to project ${i + 1}: ${p.title}`);
++      b.setAttribute('aria-current', 'false');
+       b.innerHTML = `<span class="dot"></span><span class="label">${p.title}</span>`;
+       b.addEventListener('click', () => {
+         const max = document.documentElement.scrollHeight - innerHeight;
+@@ -864,6 +1031,7 @@
+       });
+       nav.appendChild(b);
+     });
++    navButtons = Array.from(nav.querySelectorAll('button'));
+   }
+ 
+   /* ---------------------------------------------------------------------
+@@ -871,7 +1039,11 @@
+    * ------------------------------------------------------------------- */
+   function updateScroll() {
+     const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+-    targetProgress = Math.max(0, Math.min(1, scrollY / max));
++    const next = Math.max(0, Math.min(1, scrollY / max));
++    if (Math.abs(next - targetProgress) > EPS) {
++      targetProgress = next;
++      invalidate();
++    }
+   }
+ 
+   // Smoothly steer helix rotation + camera height to currentProgress.
+@@ -908,44 +1080,72 @@
+   // Distance-to-active drives scale, opacity, blur via CSS variables.
+   function updateCards() {
+     const continuousIdx = currentProgress * (projectCount - 1);
+-    activeIndex = Math.round(continuousIdx);
++    activeIndex = Math.max(0, Math.min(projectCount - 1, Math.round(continuousIdx)));
+ 
+     cardObjects.forEach((c, i) => {
+       const dist = Math.abs(i - continuousIdx);
+       const closeness = Math.max(0, 1 - dist / 2.6);
+-      const scale    = 0.78 + closeness * 0.34;       // 0.78 → 1.12
+-      const opacity  = 0.18 + closeness * 0.82;       // 0.18 → 1.00
+-      const blur     = (1 - closeness) * 2.6;         // 2.6  → 0
+-      const bright   = 0.55 + closeness * 0.55;       // 0.55 → 1.10
+-
+-      c.el.style.setProperty('--scale', scale.toFixed(3));
+-      c.el.style.setProperty('--opacity', opacity.toFixed(3));
+-      c.el.style.setProperty('--blur', blur.toFixed(2) + 'px');
+-      c.el.style.setProperty('--bright', bright.toFixed(3));
+-      c.el.classList.toggle('active', i === activeIndex);
++      const scale = (0.78 + closeness * 0.34).toFixed(3);       // 0.78 → 1.12
++      const opacity = (0.18 + closeness * 0.82).toFixed(3);     // 0.18 → 1.00
++      const bright = (0.58 + closeness * 0.52).toFixed(3);      // 0.58 → 1.10
++      const isActive = i === activeIndex;
++
++      if (c.lastScale !== scale) {
++        c.el.style.setProperty('--scale', scale);
++        c.lastScale = scale;
++      }
++      if (c.lastOpacity !== opacity) {
++        c.el.style.setProperty('--opacity', opacity);
++        c.lastOpacity = opacity;
++      }
++      if (c.lastBright !== bright) {
++        c.el.style.setProperty('--bright', bright);
++        c.lastBright = bright;
++      }
++      if (c.lastActive !== isActive) {
++        c.el.classList.toggle('active', isActive);
++        c.lastActive = isActive;
++      }
+     });
+   }
+ 
+   function updateUI() {
+     const num = String(activeIndex + 1).padStart(2, '0');
+-    document.getElementById('progress-num').textContent = num;
+-    document.getElementById('progress-bar').style.setProperty('--p', (currentProgress * 100).toFixed(1) + '%');
+-
+-    // Mini nav active dot
+-    const buttons = document.querySelectorAll('#mini-nav button');
+-    buttons.forEach((b, i) => b.classList.toggle('active', i === activeIndex));
+-
+-    // Fade hero/scroll-hint as user scrolls
+-    const fade = Math.max(0, 1 - currentProgress * 5);
+-    document.querySelector('.hero')?.style.setProperty('--hero-opacity', fade.toFixed(2));
+-    document.getElementById('scroll-hint').style.setProperty('--hint-opacity', fade.toFixed(2));
++    if (lastActiveUI !== activeIndex) {
++      uiRefs.progressNum.textContent = num;
++      navButtons.forEach((b, i) => {
++        const isActive = i === activeIndex;
++        b.classList.toggle('active', isActive);
++        b.setAttribute('aria-current', isActive ? 'true' : 'false');
++      });
++      lastActiveUI = activeIndex;
++    }
++
++    const progress = (currentProgress * 100).toFixed(1) + '%';
++    if (lastProgressUI !== progress) {
++      uiRefs.progressBar.style.setProperty('--p', progress);
++      lastProgressUI = progress;
++    }
++
++    const fade = Math.max(0, 1 - currentProgress * 5).toFixed(2);
++    if (lastFadeUI !== fade) {
++      uiRefs.hero?.style.setProperty('--hero-opacity', fade);
++      uiRefs.scrollHint.style.setProperty('--hint-opacity', fade);
++      lastFadeUI = fade;
++    }
+   }
+ 
+   /* ---------------------------------------------------------------------
+    * Animate loop
+    * ------------------------------------------------------------------- */
+   function animate() {
+-    requestAnimationFrame(animate);
++    animationId = 0;
++    renderActive = false;
++    if (!isPageVisible) return;
++
++    const progressDelta = Math.abs(targetProgress - currentProgress);
++    const mouseDelta = Math.max(Math.abs(targetMouseX - mouseX), Math.abs(targetMouseY - mouseY));
++    const moving = progressDelta > EPS || mouseDelta > MOUSE_EPS;
+ 
+     const scrollLerp = reducedMotion ? 1 : 0.08;
+     currentProgress += (targetProgress - currentProgress) * scrollLerp;
+@@ -959,29 +1159,40 @@
+     updateCards();
+     updateUI();
+ 
+-    if (particles && !reducedMotion) {
++    if (particles && !reducedMotion && moving) {
+       particles.rotation.y += 0.0006;
+     }
+ 
+     renderer.render(scene, camera);
+     cssRenderer.render(cssScene, camera);
++
++    if (moving) invalidate();
+   }
+ 
+   /* ---------------------------------------------------------------------
+    * Resize
+    * ------------------------------------------------------------------- */
+   function handleResize() {
+-    applyResponsiveSizing();
+-    camera.aspect = innerWidth / innerHeight;
+-    camera.updateProjectionMatrix();
+-    renderer.setSize(innerWidth, innerHeight, false);
+-    cssRenderer.setSize(innerWidth, innerHeight);
++    if (resizeRaf) return;
++    resizeRaf = requestAnimationFrame(() => {
++      resizeRaf = 0;
++      const previousMode = currentResponsiveMode;
++      currentResponsiveMode = applyResponsiveSizing();
++      camera.aspect = innerWidth / innerHeight;
++      camera.updateProjectionMatrix();
++      resizeRenderers();
++      if (previousMode && previousMode !== currentResponsiveMode) {
++        rebuildHelixLayout();
++      }
++      invalidate();
++    });
+   }
+ 
+   /* ---------------------------------------------------------------------
+    * Project overlay
+    * ------------------------------------------------------------------- */
+   function openProjectOverlay(i) {
++    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+     const p = projectData[i];
+     const ov = document.getElementById('overlay');
+     document.getElementById('overlay-title').textContent = p.title;
+@@ -1002,37 +1213,86 @@
+     const ov = document.getElementById('overlay');
+     ov.classList.remove('open');
+     ov.setAttribute('aria-hidden', 'true');
++    if (lastFocusedElement && document.contains(lastFocusedElement)) {
++      lastFocusedElement.focus();
++    }
++  }
++
++  function trapOverlayFocus(e) {
++    const ov = document.getElementById('overlay');
++    if (!ov.classList.contains('open')) return;
++    if (e.key === 'Escape') {
++      closeProjectOverlay();
++      return;
++    }
++    if (e.key !== 'Tab') return;
++    const focusable = Array.from(ov.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
++      .filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
++    if (!focusable.length) return;
++    const first = focusable[0];
++    const last = focusable[focusable.length - 1];
++    if (e.shiftKey && document.activeElement === first) {
++      e.preventDefault();
++      last.focus();
++    } else if (!e.shiftKey && document.activeElement === last) {
++      e.preventDefault();
++      first.focus();
++    }
+   }
+ 
+   document.getElementById('overlay-close').addEventListener('click', closeProjectOverlay);
+   document.getElementById('overlay').addEventListener('click', (e) => {
+     if (e.target.dataset.close) closeProjectOverlay();
+   });
+-  addEventListener('keydown', (e) => { if (e.key === 'Escape') closeProjectOverlay(); });
++  addEventListener('keydown', trapOverlayFocus);
+ 
+   /* ---------------------------------------------------------------------
+    * Mouse parallax
+    * ------------------------------------------------------------------- */
+-  addEventListener('mousemove', (e) => {
+-    targetMouseX = (e.clientX / innerWidth - 0.5) * 2;
+-    targetMouseY = (e.clientY / innerHeight - 0.5) * 2;
+-  });
++  addEventListener('pointermove', (e) => {
++    const nextMouseX = (e.clientX / innerWidth - 0.5) * 2;
++    const nextMouseY = (e.clientY / innerHeight - 0.5) * 2;
++    if (Math.abs(nextMouseX - targetMouseX) > MOUSE_EPS || Math.abs(nextMouseY - targetMouseY) > MOUSE_EPS) {
++      targetMouseX = nextMouseX;
++      targetMouseY = nextMouseY;
++      invalidate();
++    }
++  }, { passive: true });
+ 
+   /* ---------------------------------------------------------------------
+    * Boot
+    * ------------------------------------------------------------------- */
++  function cacheUIRefs() {
++    uiRefs.progressNum = document.getElementById('progress-num');
++    uiRefs.progressBar = document.getElementById('progress-bar');
++    uiRefs.hero = document.querySelector('.hero');
++    uiRefs.scrollHint = document.getElementById('scroll-hint');
++  }
++
+   function boot() {
+     try {
+-      applyResponsiveSizing();
++      currentResponsiveMode = applyResponsiveSizing();
++      cacheUIRefs();
+       initScene();
+       createHelix();
+       createParticles();
+       createProjectCards();
+       createMiniNav();
+       addEventListener('scroll', updateScroll, { passive: true });
+-      addEventListener('resize', handleResize);
++      addEventListener('resize', handleResize, { passive: true });
++      document.addEventListener('visibilitychange', () => {
++        isPageVisible = !document.hidden;
++        if (isPageVisible) {
++          invalidate();
++        } else if (animationId) {
++          cancelAnimationFrame(animationId);
++          animationId = 0;
++          renderActive = false;
++        }
++      });
+       updateScroll();
+-      animate();
++      window.__helixBooted = true;
++      invalidate();
+     } catch (err) {
+       console.error('Helix init failed:', err);
+       document.getElementById('fallback').classList.add('show');

@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Helix Projects — Spatial Gallery</title>
+<meta name="description" content="Helix Projects is a performant spatial portfolio gallery with an accessible fallback list." />
+<meta name="theme-color" content="#05060a" />
+<link rel="preconnect" href="https://unpkg.com" crossorigin />
+<link rel="modulepreload" href="https://unpkg.com/three@0.160.0/build/three.module.js" crossorigin />
+<link rel="modulepreload" href="https://unpkg.com/three@0.160.0/examples/jsm/renderers/CSS3DRenderer.js" crossorigin />
+<style>
+  :root {
+    --bg-0: #05060a;
+    --bg-1: #0b0e16;
+    --fg-0: #e8ecf4;
+    --fg-1: #9aa3b8;
+    --accent: #c5d6ff;
+    --accent-warm: #ffd2b8;
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-0);
+    color: var(--fg-0);
+    font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background:
+      radial-gradient(1200px 800px at 50% 10%, #1a2138 0%, #0a0d16 55%, #04050a 100%),
+      var(--bg-0);
+    min-height: 600vh; /* long scroll track */
+  }
+
+  /* Scene host: pinned behind the UI */
+  .scene-host {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none; /* lets page scroll; cards re-enable */
+  }
+  .scene-host canvas { display: block; width: 100%; height: 100%; contain: strict; }
+  .css3d-host { position: fixed; inset: 0; z-index: 2; pointer-events: none; contain: layout style paint; }
+  .css3d-host > div { pointer-events: none; }
+
+  /* Soft vignette */
+  .vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%),
+      linear-gradient(180deg, rgba(0,0,0,0.35), transparent 18%, transparent 82%, rgba(0,0,0,0.5));
+  }
+
+  /* UI Layer */
+  .ui {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    font-feature-settings: "ss01", "tnum";
+  }
+  .ui > * { pointer-events: auto; }
+
+  header.app-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 32px;
+    pointer-events: none;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--fg-0);
+    pointer-events: auto;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 90deg, #c5d6ff, #6b85d6, #c5d6ff);
+    box-shadow: 0 0 14px rgba(160, 190, 255, 0.55), inset 0 0 0 1px rgba(255,255,255,0.3);
+  }
+  .progress-indicator {
+    font-variant-numeric: tabular-nums;
+    font-size: 12px; letter-spacing: 0.12em;
+    color: var(--fg-1);
+    display: flex; gap: 14px; align-items: center;
+    pointer-events: auto;
+  }
+  .progress-indicator .num { color: var(--fg-0); font-weight: 500; }
+  .progress-indicator .bar {
+    width: 88px; height: 1px; background: rgba(255,255,255,0.12); position: relative;
+  }
+  .progress-indicator .bar::after {
+    content: ""; position: absolute; left: 0; top: 0; height: 100%;
+    width: var(--p, 0%); background: linear-gradient(90deg, #c5d6ff, #ffd2b8);
+    transition: width 120ms linear;
+  }
+
+  /* Hero copy */
+  .hero {
+    position: absolute;
+    left: 32px; bottom: 110px;
+    max-width: 460px;
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-family: "Fraunces", "Times New Roman", serif;
+    font-weight: 300;
+    font-size: clamp(28px, 3.4vw, 46px);
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px 0;
+    color: var(--fg-0);
+  }
+  .hero h1 em {
+    font-style: italic;
+    background: linear-gradient(90deg, #c5d6ff, #ffd2b8);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    font-size: 13.5px; line-height: 1.55;
+    color: var(--fg-1); margin: 0; max-width: 380px;
+  }
+  .hero.fade { opacity: var(--hero-opacity, 1); transition: opacity 200ms linear; }
+
+  /* Scroll hint */
+  .scroll-hint {
+    position: absolute;
+    left: 50%; bottom: 28px;
+    transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--fg-1);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    pointer-events: none;
+    opacity: var(--hint-opacity, 1);
+    transition: opacity 250ms linear;
+  }
+  .scroll-hint .line {
+    width: 1px; height: 36px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.5), transparent);
+    animation: dripDown 2.4s ease-in-out infinite;
+  }
+  @keyframes dripDown {
+    0% { transform: translateY(-12px); opacity: 0; }
+    35% { opacity: 1; }
+    100% { transform: translateY(12px); opacity: 0; }
+  }
+
+  /* Mini nav (vertical dots) */
+  .mini-nav {
+    position: absolute;
+    right: 28px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 10px;
+    pointer-events: auto;
+  }
+  .mini-nav button {
+    width: 22px; height: 22px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-1);
+    font-size: 10px;
+    padding: 0;
+  }
+  .mini-nav .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,0.22);
+    transition: all 220ms cubic-bezier(.4,0,.2,1);
+  }
+  .mini-nav button:hover .dot { background: rgba(255,255,255,0.55); }
+  .mini-nav button.active .dot {
+    background: var(--accent);
+    width: 8px; height: 8px;
+    box-shadow: 0 0 10px rgba(180,210,255,0.7);
+  }
+  .mini-nav .label {
+    position: absolute;
+    right: 26px;
+    white-space: nowrap;
+    font-size: 11px; letter-spacing: 0.04em;
+    color: var(--fg-0);
+    background: rgba(20,24,36,0.7);
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(12px);
+    opacity: 0; transform: translateX(8px);
+    pointer-events: none;
+    transition: opacity 180ms, transform 180ms;
+  }
+  .mini-nav button:hover .label,
+  .mini-nav button:focus-visible .label { opacity: 1; transform: translateX(0); }
+
+  /* Cards (CSS3D) */
+  .card-3d {
+    /* the outer wrapper that CSS3DObject controls */
+    width: 320px;
+    height: 200px;
+  }
+  .card {
+    width: 100%; height: 100%;
+    position: relative;
+    border-radius: 18px;
+    background:
+      linear-gradient(140deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 60%, rgba(255,255,255,0.06) 100%);
+    border: 1px solid rgba(255,255,255,0.13);
+    background-color: rgba(17, 22, 35, 0.64);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow:
+      0 18px 50px -10px rgba(0,0,0,0.55),
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      inset 0 0 0 1px rgba(255,255,255,0.02);
+    overflow: hidden;
+    cursor: pointer;
+    backface-visibility: hidden;
+    transform-style: preserve-3d;
+    will-change: transform, opacity, filter;
+    pointer-events: auto;
+    transform: scale(var(--scale, 0.85));
+    opacity: var(--opacity, 0.5);
+    filter: brightness(var(--bright, 0.78));
+    transition:
+      transform 380ms cubic-bezier(.22,.8,.2,1),
+      opacity 380ms ease,
+      filter 260ms ease,
+      box-shadow 380ms ease,
+      border-color 380ms ease;
+  }
+  .card.active {
+    box-shadow:
+      0 0 0 1px rgba(197,214,255,0.45),
+      0 0 60px 6px rgba(140,180,255,0.30),
+      0 30px 60px -16px rgba(0,0,0,0.65),
+      inset 0 1px 0 rgba(255,255,255,0.18);
+    border-color: rgba(220,232,255,0.55);
+  }
+  .card:hover {
+    --bright: 1.05;
+    transform: scale(calc(var(--scale, 0.85) * 1.04)) translateY(-4px);
+    box-shadow:
+      0 0 0 1px rgba(197,214,255,0.5),
+      0 0 80px 10px rgba(140,180,255,0.35),
+      0 30px 60px -10px rgba(0,0,0,0.7);
+  }
+  .card:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px rgba(197,214,255,0.85),
+      0 0 60px 8px rgba(140,180,255,0.40);
+  }
+
+  .card-thumb {
+    position: absolute; inset: 10px 10px 70px 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+  }
+  .card-thumb::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 80% at 30% 20%, rgba(255,255,255,0.18), transparent 50%),
+      linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.35));
+  }
+  .card-thumb::after {
+    content: ""; position: absolute; inset: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    border-radius: inherit;
+  }
+
+  .card-meta {
+    position: absolute;
+    left: 14px; right: 14px; bottom: 12px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 10px;
+  }
+  .card-title {
+    font-size: 14.5px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    color: var(--fg-0);
+    line-height: 1.15;
+    margin: 0;
+  }
+  .card-sub {
+    font-size: 10.5px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: rgba(232,236,244,0.62);
+    margin-top: 4px;
+  }
+  .card-status {
+    position: absolute;
+    top: 14px; right: 14px;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(10,14,22,0.55);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: rgba(232,236,244,0.85);
+    backdrop-filter: blur(8px);
+  }
+  .card-status[data-tone="warm"] { color: #ffd2b8; border-color: rgba(255,210,184,0.45); }
+  .card-status[data-tone="cool"] { color: #c5d6ff; border-color: rgba(197,214,255,0.45); }
+  .card-status[data-tone="muted"] { color: rgba(232,236,244,0.55); }
+
+  .card-index {
+    position: absolute;
+    top: 14px; left: 14px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: rgba(232,236,244,0.6);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Project overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 260ms ease;
+  }
+  .overlay.open { pointer-events: auto; opacity: 1; }
+  .overlay-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(4, 6, 12, 0.55);
+    backdrop-filter: blur(8px);
+  }
+  .overlay-panel {
+    position: relative;
+    margin-left: auto;
+    width: min(560px, 92vw);
+    height: 100%;
+    background: linear-gradient(180deg, #0c111c 0%, #080b13 100%);
+    border-left: 1px solid rgba(255,255,255,0.08);
+    box-shadow: -40px 0 80px rgba(0,0,0,0.4);
+    transform: translateX(40px);
+    opacity: 0;
+    transition: transform 380ms cubic-bezier(.22,.8,.2,1), opacity 320ms ease;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .overlay.open .overlay-panel { transform: translateX(0); opacity: 1; }
+  .overlay-close {
+    position: absolute; top: 18px; right: 18px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--fg-0);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: background 180ms;
+  }
+  .overlay-close:hover { background: rgba(255,255,255,0.10); }
+  .overlay-hero {
+    aspect-ratio: 16/9;
+    margin: 22px;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .overlay-body { padding: 0 32px 32px; }
+  .overlay-eyebrow {
+    font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fg-1);
+    margin-bottom: 10px;
+  }
+  .overlay-title {
+    font-family: "Fraunces", serif;
+    font-weight: 300;
+    font-size: 36px; line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px 0;
+  }
+  .overlay-desc {
+    font-size: 14px; line-height: 1.6;
+    color: rgba(232,236,244,0.78);
+    margin: 0 0 28px 0;
+  }
+  .overlay-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 24px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 22px;
+  }
+  .overlay-grid dt {
+    font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--fg-1); margin-bottom: 4px;
+  }
+  .overlay-grid dd {
+    margin: 0; font-size: 13px; color: var(--fg-0);
+  }
+
+  /* Fallback */
+  .fallback {
+    position: fixed; inset: 0; z-index: 100;
+    display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 32px;
+    background: radial-gradient(1200px 800px at 50% 30%, #1a2138 0%, #04050a 70%);
+  }
+  .fallback h2 { font-family: "Fraunces", serif; font-weight: 300; font-size: 36px; margin: 0 0 12px; }
+  .fallback p { color: var(--fg-1); max-width: 420px; line-height: 1.55; }
+  .fallback.show { display: flex; }
+
+
+  .fallback-list {
+    width: min(760px, 92vw);
+    max-height: 44vh;
+    overflow: auto;
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .fallback-card {
+    text-align: left;
+    padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.045);
+  }
+  .fallback-card strong {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .fallback-card span {
+    display: block;
+    color: var(--fg-1);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Mobile */
+  @media (max-width: 720px) {
+    header.app-header { padding: 16px 18px; }
+    .hero { left: 18px; right: 18px; bottom: 90px; max-width: none; }
+    .mini-nav { display: none; }
+    .card-3d { width: 240px; height: 150px; }
+    .card-title { font-size: 13px; }
+    .card-thumb { inset: 8px 8px 56px 8px; }
+    .overlay-body { padding: 0 22px 22px; }
+    .overlay-title { font-size: 28px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-hint .line { animation: none; }
+    .card { transition: none; filter: none; }
+    .vignette { background: rgba(0,0,0,0.25); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="scene-host">
+    <canvas id="webgl" aria-hidden="true"></canvas>
+  </div>
+  <div class="css3d-host" id="css3d" aria-hidden="false"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <div class="ui">
+    <header class="app-header">
+      <div class="brand" aria-label="Helix Projects home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Helix Projects</span>
+      </div>
+      <div class="progress-indicator" aria-live="polite">
+        <span class="num" id="progress-num">01</span>
+        <span class="bar" id="progress-bar"></span>
+        <span>12</span>
+      </div>
+    </header>
+
+    <main class="hero" aria-label="Introduction">
+      <h1>Scroll through the <em>project helix.</em></h1>
+      <p>A spatial gallery of selected work, arranged as a rotating three-dimensional ribbon. Each turn reveals the next chapter.</p>
+    </main>
+
+    <nav class="mini-nav" id="mini-nav" aria-label="Project navigation"></nav>
+
+    <div class="scroll-hint" id="scroll-hint" aria-hidden="true">
+      <span>Scroll</span>
+      <span class="line"></span>
+    </div>
+  </div>
+
+  <!-- Project detail overlay -->
+  <aside class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlay-title" aria-hidden="true">
+    <div class="overlay-backdrop" data-close="1"></div>
+    <div class="overlay-panel">
+      <button class="overlay-close" id="overlay-close" aria-label="Close project details">×</button>
+      <div class="overlay-hero" id="overlay-hero"></div>
+      <div class="overlay-body">
+        <div class="overlay-eyebrow" id="overlay-eyebrow">Project</div>
+        <h2 class="overlay-title" id="overlay-title">Project</h2>
+        <p class="overlay-desc" id="overlay-desc"></p>
+        <dl class="overlay-grid">
+          <div><dt>Category</dt><dd id="ov-cat">—</dd></div>
+          <div><dt>Year</dt><dd id="ov-year">—</dd></div>
+          <div><dt>Status</dt><dd id="ov-status">—</dd></div>
+          <div><dt>Position</dt><dd id="ov-pos">—</dd></div>
+        </dl>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Fallback if Three.js fails -->
+  <div class="fallback" id="fallback">
+    <h2>Spatial gallery unavailable</h2>
+    <p>The 3D experience couldn't initialise on this device. Browse the simplified project list below.</p>
+    <div class="fallback-list" aria-label="Project list">
+      <article class="fallback-card"><strong>Orbital Identity</strong><span>Branding · 2026 · Live</span></article>
+      <article class="fallback-card"><strong>Signal Atlas</strong><span>Data Interface · 2026 · New</span></article>
+      <article class="fallback-card"><strong>Neon Archive</strong><span>Web Experience · 2025 · Live</span></article>
+      <article class="fallback-card"><strong>Glass Engine</strong><span>Product Design · 2025 · Live</span></article>
+      <article class="fallback-card"><strong>Echo Commerce</strong><span>E-Commerce · 2025 · Live</span></article>
+      <article class="fallback-card"><strong>Kinetic Lab</strong><span>Motion System · 2024 · Archive</span></article>
+      <article class="fallback-card"><strong>Lunar CRM</strong><span>SaaS Dashboard · 2024 · Live</span></article>
+      <article class="fallback-card"><strong>Aether Notes</strong><span>Editorial System · 2024 · Live</span></article>
+      <article class="fallback-card"><strong>Pulse Grid</strong><span>Analytics · 2023 · Archive</span></article>
+      <article class="fallback-card"><strong>Magnetic Studio</strong><span>Portfolio · 2023 · Live</span></article>
+      <article class="fallback-card"><strong>Soft Machines</strong><span>AI Interface · 2023 · Live</span></article>
+      <article class="fallback-card"><strong>Future Index</strong><span>Research Platform · 2022 · Archive</span></article>
+    </div>
+  </div>
+
+  <script>
+  window.__helixBooted = false;
+  window.__showHelixFallback = function () {
+    var fallback = document.getElementById('fallback');
+    if (fallback) fallback.classList.add('show');
+  };
+  window.addEventListener('error', function (event) {
+    var target = event && event.target;
+    var isScriptOrModuleFailure = target && (target.tagName === 'SCRIPT' || target.rel === 'modulepreload');
+    if (isScriptOrModuleFailure || /module|import|three/i.test(String(event && event.message || ''))) {
+      window.__showHelixFallback();
+    }
+  }, true);
+  setTimeout(function () {
+    if (!window.__helixBooted) window.__showHelixFallback();
+  }, 3500);
+</script>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;1,300&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <script type="module">
+  import * as THREE from 'three';
+  import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+
+  /* ---------------------------------------------------------------------
+   * projectData — content for cards + overlay
+   * ------------------------------------------------------------------- */
+  const projectData = [
+    { title: 'Orbital Identity',  category: 'Branding',         year: 2026, status: 'Live',     hue: 220, hue2: 280 },
+    { title: 'Signal Atlas',      category: 'Data Interface',   year: 2026, status: 'New',      hue: 200, hue2: 160 },
+    { title: 'Neon Archive',      category: 'Web Experience',   year: 2025, status: 'Live',     hue: 300, hue2: 250 },
+    { title: 'Glass Engine',      category: 'Product Design',   year: 2025, status: 'Live',     hue: 180, hue2: 220 },
+    { title: 'Echo Commerce',     category: 'E-Commerce',       year: 2025, status: 'Live',     hue: 30,  hue2: 350 },
+    { title: 'Kinetic Lab',       category: 'Motion System',    year: 2024, status: 'Archive',  hue: 320, hue2: 260 },
+    { title: 'Lunar CRM',         category: 'SaaS Dashboard',   year: 2024, status: 'Live',     hue: 240, hue2: 200 },
+    { title: 'Aether Notes',      category: 'Editorial System', year: 2024, status: 'Live',     hue: 160, hue2: 200 },
+    { title: 'Pulse Grid',        category: 'Analytics',        year: 2023, status: 'Archive',  hue: 0,   hue2: 320 },
+    { title: 'Magnetic Studio',   category: 'Portfolio',        year: 2023, status: 'Live',     hue: 60,  hue2: 30 },
+    { title: 'Soft Machines',     category: 'AI Interface',     year: 2023, status: 'Live',     hue: 260, hue2: 220 },
+    { title: 'Future Index',      category: 'Research Platform',year: 2022, status: 'Archive',  hue: 140, hue2: 180 },
+  ];
+
+  const descriptions = [
+    'A modular identity system for an aerospace consortium — typographic marks orbit a fixed nucleus, generating dynamic compositions for every touchpoint.',
+    'A dense data interface for monitoring telemetry across distributed networks. Every density level surfaces a different conversation between operator and signal.',
+    'An archival web experience built around a rotating index of cultural artefacts, lit only by the glow of the screens that catalogue them.',
+    'Design language for a hardware-software product where the surface is the interface — light pipes, capacitive zones, and motion as confirmation.',
+    'A commerce platform that treats checkout as a sequence of confident, quiet moments. Animation as guidance, not decoration.',
+    'A motion system codifying timing, easing, and choreography across a multi-product suite. Twelve curves do most of the work.',
+    'A scheduling and CRM dashboard for night-shift operations. High contrast at low brightness, no surface above 18% luminance.',
+    'An editorial system for long-form research — type-first, image-second, with quiet generative covers per issue.',
+    'A real-time analytics surface where breath and rhythm replace charts. Patterns emerge from the cadence rather than the axes.',
+    'A studio portfolio rebuilt around a magnetic cursor and lensed previews. Browsing feels like walking a gallery.',
+    'A control panel for tuning autonomous models — soft dials, ranged states, every change visualised as a pulse.',
+    'A research platform indexing emerging futures across domains. Long-form, citation-aware, persistently open.',
+  ];
+
+  const projectCount = projectData.length;
+  const saveData = Boolean(navigator.connection?.saveData);
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches || saveData;
+
+  /* ---------------------------------------------------------------------
+   * Helix layout constants
+   * Helix math: angle = t * TURNS * 2PI, x = cos*r, z = sin*r, y linear
+   * ------------------------------------------------------------------- */
+  let TURNS = 2.2;
+  let HELIX_RADIUS = 380;
+  let HELIX_HEIGHT = 1700;
+  let CARD_OUT_OFFSET = 30;
+  let CARD_VERTICAL_OFFSET = 0;
+
+  function getResponsiveMode() {
+    if (innerWidth < 720) return 'compact';
+    if (innerWidth < 1100) return 'medium';
+    return 'desktop';
+  }
+
+  function applyResponsiveSizing() {
+    const mode = getResponsiveMode();
+    if (mode === 'compact') {
+      HELIX_RADIUS = 230;
+      HELIX_HEIGHT = 1300;
+      CARD_OUT_OFFSET = 20;
+    } else if (mode === 'medium') {
+      HELIX_RADIUS = 310;
+      HELIX_HEIGHT = 1500;
+      CARD_OUT_OFFSET = 26;
+    } else {
+      HELIX_RADIUS = 380;
+      HELIX_HEIGHT = 1700;
+      CARD_OUT_OFFSET = 30;
+    }
+    return mode;
+  }
+
+  // Param helix position in helix-local space (before group rotation)
+  function getHelixPos(t) {
+    const angle = t * TURNS * Math.PI * 2;
+    const y = HELIX_HEIGHT / 2 - t * HELIX_HEIGHT;
+    const x = Math.cos(angle) * HELIX_RADIUS;
+    const z = Math.sin(angle) * HELIX_RADIUS;
+    return { x, y, z, angle };
+  }
+
+  /* ---------------------------------------------------------------------
+   * State
+   * ------------------------------------------------------------------- */
+  let scene, camera, renderer;
+  let cssScene, cssRenderer;
+  let helixGroup, cssHelixGroup;
+  let helixMesh, helixGlow, particles;
+  const cardObjects = [];
+  let targetProgress = 0, currentProgress = 0;
+  let activeIndex = 0;
+  let targetMouseX = 0, targetMouseY = 0;
+  let mouseX = 0, mouseY = 0;
+  let cameraTargetY = HELIX_HEIGHT / 2;
+  let currentResponsiveMode = '';
+  let resizeRaf = 0;
+  let animationId = 0;
+  let renderActive = false;
+  let isPageVisible = !document.hidden;
+  let lastProgressUI = '';
+  let lastFadeUI = '';
+  let lastActiveUI = -1;
+  let navButtons = [];
+  let lastFocusedElement = null;
+  const uiRefs = {};
+  const EPS = 0.0012;
+  const MOUSE_EPS = 0.003;
+
+  function getPixelRatioLimit() {
+    if (reducedMotion) return 1;
+    if (innerWidth < 720) return 1.15;
+    if (innerWidth < 1100) return 1.35;
+    return 1.5;
+  }
+
+  function resizeRenderers() {
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, getPixelRatioLimit()));
+    renderer.setSize(innerWidth, innerHeight, false);
+    cssRenderer.setSize(innerWidth, innerHeight);
+  }
+
+  function invalidate() {
+    if (!isPageVisible) return;
+    if (!renderActive) {
+      renderActive = true;
+      animationId = requestAnimationFrame(animate);
+    }
+  }
+
+  function clearThreeObject(obj) {
+    obj.traverse((child) => {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => mat && mat.dispose && mat.dispose());
+      }
+    });
+  }
+
+  function clearGroup(group) {
+    if (!group) return;
+    while (group.children.length) {
+      const child = group.children[0];
+      clearThreeObject(child);
+      group.remove(child);
+    }
+  }
+
+  function rebuildHelixLayout() {
+    clearGroup(helixGroup);
+    if (cssHelixGroup) {
+      while (cssHelixGroup.children.length) {
+        const child = cssHelixGroup.children[0];
+        if (child.element && child.element.remove) child.element.remove();
+        cssHelixGroup.remove(child);
+      }
+    }
+    cardObjects.length = 0;
+    createHelix();
+    createProjectCards();
+    cameraTargetY = HELIX_HEIGHT / 2 - currentProgress * HELIX_HEIGHT;
+    lastActiveUI = -1;
+    invalidate();
+  }
+
+  /* ---------------------------------------------------------------------
+   * initScene — renderer, camera, lights, scenes
+   * ------------------------------------------------------------------- */
+  function initScene() {
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05060a, 0.0011);
+
+    camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 1, 6000);
+    camera.position.set(0, HELIX_HEIGHT / 2, 1180);
+
+    const canvas = document.getElementById('webgl');
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: !reducedMotion && innerWidth >= 720,
+      alpha: true,
+      powerPreference: 'high-performance',
+    });
+    renderer.setClearColor(0x000000, 0);
+
+    cssScene = new THREE.Scene();
+    cssRenderer = new CSS3DRenderer();
+    resizeRenderers();
+    const cssHost = document.getElementById('css3d');
+    cssHost.appendChild(cssRenderer.domElement);
+    cssRenderer.domElement.style.position = 'absolute';
+    cssRenderer.domElement.style.inset = '0';
+
+    // Lights — soft ambient + two directional accents for premium fall-off.
+    scene.add(new THREE.AmbientLight(0x6878a8, 0.55));
+
+    const keyLight = new THREE.PointLight(0xb6ccff, 1.6, 4500, 1.2);
+    keyLight.position.set(700, 900, 900);
+    scene.add(keyLight);
+
+    const warmLight = new THREE.PointLight(0xffb38a, 0.7, 4500, 1.4);
+    warmLight.position.set(-800, -500, 700);
+    scene.add(warmLight);
+
+    const rimLight = new THREE.PointLight(0xc5d6ff, 0.4, 3000, 1.4);
+    rimLight.position.set(0, 400, -1000);
+    scene.add(rimLight);
+
+    helixGroup = new THREE.Group();
+    scene.add(helixGroup);
+
+    cssHelixGroup = new THREE.Group();
+    cssScene.add(cssHelixGroup);
+  }
+
+  /* ---------------------------------------------------------------------
+   * createHelix — ribbon along a helical path
+   * Build a ribbon: at each step, place edges along (T x N) where N is
+   * the outward radial direction. Gives a flat band whose face points
+   * outward as it twists down the helix.
+   * ------------------------------------------------------------------- */
+  function createHelix() {
+    const segments = reducedMotion || innerWidth < 720 ? 280 : innerWidth < 1100 ? 340 : 400;
+    const ribbonWidth = innerWidth < 720 ? 24 : 30;
+    const positions = [];
+    const indices = [];
+    const uvs = [];
+
+    function tangentAt(t) {
+      const dt = 0.0008;
+      const a = getHelixPos(Math.max(0, t - dt));
+      const b = getHelixPos(Math.min(1, t + dt));
+      const tx = b.x - a.x, ty = b.y - a.y, tz = b.z - a.z;
+      const len = Math.hypot(tx, ty, tz) || 1;
+      return [tx / len, ty / len, tz / len];
+    }
+
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const p = getHelixPos(t);
+      const [Tx, Ty, Tz] = tangentAt(t);
+      // Outward radial normal (in xz)
+      const Nx = Math.cos(p.angle), Ny = 0, Nz = Math.sin(p.angle);
+      // Width direction = T x N
+      let Wx = Ty * Nz - Tz * Ny;
+      let Wy = Tz * Nx - Tx * Nz;
+      let Wz = Tx * Ny - Ty * Nx;
+      const wlen = Math.hypot(Wx, Wy, Wz) || 1;
+      Wx /= wlen; Wy /= wlen; Wz /= wlen;
+
+      positions.push(
+        p.x + Wx * ribbonWidth / 2,
+        p.y + Wy * ribbonWidth / 2,
+        p.z + Wz * ribbonWidth / 2
+      );
+      positions.push(
+        p.x - Wx * ribbonWidth / 2,
+        p.y - Wy * ribbonWidth / 2,
+        p.z - Wz * ribbonWidth / 2
+      );
+      uvs.push(t, 0, t, 1);
+    }
+
+    for (let i = 0; i < segments; i++) {
+      const a = i * 2, b = i * 2 + 1, c = (i + 1) * 2, d = (i + 1) * 2 + 1;
+      indices.push(a, b, c, b, d, c);
+    }
+
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geom.setIndex(indices);
+    geom.computeVertexNormals();
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x2a3552,
+      metalness: 0.88,
+      roughness: 0.28,
+      side: THREE.DoubleSide,
+      emissive: 0x12203c,
+      emissiveIntensity: 0.85,
+    });
+
+    helixMesh = new THREE.Mesh(geom, mat);
+    helixGroup.add(helixMesh);
+
+    // Subtle glow tube around the spine
+    const curvePoints = [];
+    const spineSamples = reducedMotion || innerWidth < 720 ? 120 : 170;
+    for (let i = 0; i <= spineSamples; i++) {
+      const p = getHelixPos(i / spineSamples);
+      curvePoints.push(new THREE.Vector3(p.x, p.y, p.z));
+    }
+    const spineCurve = new THREE.CatmullRomCurve3(curvePoints);
+    const spineGeom = new THREE.TubeGeometry(spineCurve, Math.round(spineSamples * 0.9), 1.4, 6, false);
+    const spineMat = new THREE.MeshBasicMaterial({
+      color: 0x9bb6ff,
+      transparent: true,
+      opacity: 0.55,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    helixGlow = new THREE.Mesh(spineGeom, spineMat);
+    helixGroup.add(helixGlow);
+  }
+
+  /* ---------------------------------------------------------------------
+   * createParticles — floating dust in space
+   * ------------------------------------------------------------------- */
+  function createParticles() {
+    const count = reducedMotion ? 80 : innerWidth < 720 ? 140 : innerWidth < 1100 ? 220 : 300;
+    const positions = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3]     = (Math.random() - 0.5) * 2400;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * HELIX_HEIGHT * 1.5;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 2400;
+      sizes[i] = 0.8 + Math.random() * 2.4;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    g.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    const m = new THREE.PointsMaterial({
+      color: 0xb8caf0,
+      size: 1.6,
+      transparent: true,
+      opacity: 0.55,
+      sizeAttenuation: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    particles = new THREE.Points(g, m);
+    scene.add(particles);
+  }
+
+  /* ---------------------------------------------------------------------
+   * createProjectCards — CSS3D cards with rich gradient thumbnails
+   * Each card sits on the helix at t = i / (n-1), pushed outward by
+   * CARD_OUT_OFFSET so it doesn't intersect the ribbon.
+   * ------------------------------------------------------------------- */
+  function makeThumbBackground(p, idx) {
+    const a = `hsl(${p.hue}, 72%, 56%)`;
+    const b = `hsl(${p.hue2}, 68%, 42%)`;
+    const c = `hsl(${(p.hue + 30) % 360}, 60%, 22%)`;
+    // mosaic of gradients per project = unique placeholder identity
+    const styles = [
+      `radial-gradient(120% 90% at 30% 20%, ${a} 0%, ${b} 45%, ${c} 100%)`,
+      `linear-gradient(135deg, ${a} 0%, ${c} 100%), radial-gradient(60% 50% at 70% 80%, ${b}, transparent)`,
+      `conic-gradient(from 220deg at 60% 40%, ${a}, ${b}, ${c}, ${a})`,
+      `radial-gradient(80% 60% at 80% 20%, ${a}, transparent 60%), linear-gradient(180deg, ${c}, ${b})`,
+      `linear-gradient(160deg, ${a} 0%, ${b} 50%, ${c} 100%)`,
+      `radial-gradient(70% 70% at 20% 80%, ${a}, transparent 65%), linear-gradient(135deg, ${b}, ${c})`,
+    ];
+    return styles[idx % styles.length];
+  }
+
+  function statusTone(status) {
+    if (status === 'New')    return 'cool';
+    if (status === 'Live')   return 'warm';
+    if (status === 'Archive')return 'muted';
+    return '';
+  }
+
+  function createProjectCards() {
+    projectData.forEach((p, i) => {
+      const t = projectCount === 1 ? 0.5 : i / (projectCount - 1);
+      const pos = getHelixPos(t);
+
+      // Outward unit vector in xz (in helix-local space)
+      const nx = Math.cos(pos.angle);
+      const nz = Math.sin(pos.angle);
+
+      // Outer wrapper drives the CSS3D transform
+      const wrapper = document.createElement('div');
+      wrapper.className = 'card-3d';
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'card';
+      card.tabIndex = 0;
+      card.setAttribute('aria-label', `${p.title}, ${p.category}, ${p.year}`);
+      card.dataset.index = String(i);
+      card.innerHTML = `
+        <div class="card-thumb" style="background: ${makeThumbBackground(p, i)};"></div>
+        <div class="card-index">${String(i + 1).padStart(2, '0')}</div>
+        <div class="card-status" data-tone="${statusTone(p.status)}">${p.status}</div>
+        <div class="card-meta">
+          <div>
+            <div class="card-title">${p.title}</div>
+            <div class="card-sub">${p.category} · ${p.year}</div>
+          </div>
+        </div>
+      `;
+      wrapper.appendChild(card);
+
+      card.addEventListener('click', () => openProjectOverlay(i));
+
+      const obj = new CSS3DObject(wrapper);
+      obj.position.set(
+        pos.x + nx * CARD_OUT_OFFSET,
+        pos.y + CARD_VERTICAL_OFFSET,
+        pos.z + nz * CARD_OUT_OFFSET
+      );
+      // Face card's readable side outward. Object3D.lookAt aims local -Z
+      // at the target, leaving +Z (the HTML face) on the opposite side.
+      // Aiming at the helix axis at the same height puts +Z outward.
+      obj.lookAt(0, obj.position.y, 0);
+
+      cssHelixGroup.add(obj);
+      cardObjects.push({
+        obj,
+        el: card,
+        baseAngle: pos.angle,
+        t,
+        basePos: { ...pos, nx, nz },
+        lastScale: '',
+        lastOpacity: '',
+        lastBright: '',
+        lastActive: null,
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+   * Mini nav dots — DOM list of buttons that jump to a card by scroll
+   * ------------------------------------------------------------------- */
+  function createMiniNav() {
+    const nav = document.getElementById('mini-nav');
+    projectData.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-label', `Go to project ${i + 1}: ${p.title}`);
+      b.setAttribute('aria-current', 'false');
+      b.innerHTML = `<span class="dot"></span><span class="label">${p.title}</span>`;
+      b.addEventListener('click', () => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        const tt = i / (projectCount - 1);
+        scrollTo({ top: tt * max, behavior: reducedMotion ? 'auto' : 'smooth' });
+      });
+      nav.appendChild(b);
+    });
+    navButtons = Array.from(nav.querySelectorAll('button'));
+  }
+
+  /* ---------------------------------------------------------------------
+   * Update functions
+   * ------------------------------------------------------------------- */
+  function updateScroll() {
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    const next = Math.max(0, Math.min(1, scrollY / max));
+    if (Math.abs(next - targetProgress) > EPS) {
+      targetProgress = next;
+      invalidate();
+    }
+  }
+
+  // Smoothly steer helix rotation + camera height to currentProgress.
+  function updateHelix() {
+    const baseY = Math.PI / 2 - currentProgress * TURNS * Math.PI * 2;
+    helixGroup.rotation.y = baseY;
+    cssHelixGroup.rotation.y = baseY;
+
+    // Subtle parallax tilt from mouse
+    const tiltX = mouseY * 0.06;
+    const tiltZ = mouseX * 0.03;
+    helixGroup.rotation.x = tiltX;
+    helixGroup.rotation.z = tiltZ;
+    cssHelixGroup.rotation.x = tiltX;
+    cssHelixGroup.rotation.z = tiltZ;
+  }
+
+  function updateCamera() {
+    // Camera follows the active card's vertical position
+    cameraTargetY = HELIX_HEIGHT / 2 - currentProgress * HELIX_HEIGHT;
+    const yLerp = reducedMotion ? 1 : 0.10;
+    camera.position.y += (cameraTargetY - camera.position.y) * yLerp;
+
+    // Mouse parallax for camera x and slight z dolly
+    const px = mouseX * 70;
+    const py = -mouseY * 30;
+    camera.position.x += (px - camera.position.x) * (reducedMotion ? 1 : 0.05);
+    const targetZ = 1180 + Math.abs(mouseX) * 30;
+    camera.position.z += (targetZ - camera.position.z) * 0.04;
+
+    camera.lookAt(0, camera.position.y + py * 0.5, 0);
+  }
+
+  // Distance-to-active drives scale, opacity, blur via CSS variables.
+  function updateCards() {
+    const continuousIdx = currentProgress * (projectCount - 1);
+    activeIndex = Math.max(0, Math.min(projectCount - 1, Math.round(continuousIdx)));
+
+    cardObjects.forEach((c, i) => {
+      const dist = Math.abs(i - continuousIdx);
+      const closeness = Math.max(0, 1 - dist / 2.6);
+      const scale = (0.78 + closeness * 0.34).toFixed(3);       // 0.78 → 1.12
+      const opacity = (0.18 + closeness * 0.82).toFixed(3);     // 0.18 → 1.00
+      const bright = (0.58 + closeness * 0.52).toFixed(3);      // 0.58 → 1.10
+      const isActive = i === activeIndex;
+
+      if (c.lastScale !== scale) {
+        c.el.style.setProperty('--scale', scale);
+        c.lastScale = scale;
+      }
+      if (c.lastOpacity !== opacity) {
+        c.el.style.setProperty('--opacity', opacity);
+        c.lastOpacity = opacity;
+      }
+      if (c.lastBright !== bright) {
+        c.el.style.setProperty('--bright', bright);
+        c.lastBright = bright;
+      }
+      if (c.lastActive !== isActive) {
+        c.el.classList.toggle('active', isActive);
+        c.lastActive = isActive;
+      }
+    });
+  }
+
+  function updateUI() {
+    const num = String(activeIndex + 1).padStart(2, '0');
+    if (lastActiveUI !== activeIndex) {
+      uiRefs.progressNum.textContent = num;
+      navButtons.forEach((b, i) => {
+        const isActive = i === activeIndex;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-current', isActive ? 'true' : 'false');
+      });
+      lastActiveUI = activeIndex;
+    }
+
+    const progress = (currentProgress * 100).toFixed(1) + '%';
+    if (lastProgressUI !== progress) {
+      uiRefs.progressBar.style.setProperty('--p', progress);
+      lastProgressUI = progress;
+    }
+
+    const fade = Math.max(0, 1 - currentProgress * 5).toFixed(2);
+    if (lastFadeUI !== fade) {
+      uiRefs.hero?.style.setProperty('--hero-opacity', fade);
+      uiRefs.scrollHint.style.setProperty('--hint-opacity', fade);
+      lastFadeUI = fade;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+   * Animate loop
+   * ------------------------------------------------------------------- */
+  function animate() {
+    animationId = 0;
+    renderActive = false;
+    if (!isPageVisible) return;
+
+    const progressDelta = Math.abs(targetProgress - currentProgress);
+    const mouseDelta = Math.max(Math.abs(targetMouseX - mouseX), Math.abs(targetMouseY - mouseY));
+    const moving = progressDelta > EPS || mouseDelta > MOUSE_EPS;
+
+    const scrollLerp = reducedMotion ? 1 : 0.08;
+    currentProgress += (targetProgress - currentProgress) * scrollLerp;
+
+    const mouseLerp = reducedMotion ? 1 : 0.06;
+    mouseX += (targetMouseX - mouseX) * mouseLerp;
+    mouseY += (targetMouseY - mouseY) * mouseLerp;
+
+    updateHelix();
+    updateCamera();
+    updateCards();
+    updateUI();
+
+    if (particles && !reducedMotion && moving) {
+      particles.rotation.y += 0.0006;
+    }
+
+    renderer.render(scene, camera);
+    cssRenderer.render(cssScene, camera);
+
+    if (moving) invalidate();
+  }
+
+  /* ---------------------------------------------------------------------
+   * Resize
+   * ------------------------------------------------------------------- */
+  function handleResize() {
+    if (resizeRaf) return;
+    resizeRaf = requestAnimationFrame(() => {
+      resizeRaf = 0;
+      const previousMode = currentResponsiveMode;
+      currentResponsiveMode = applyResponsiveSizing();
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      resizeRenderers();
+      if (previousMode && previousMode !== currentResponsiveMode) {
+        rebuildHelixLayout();
+      }
+      invalidate();
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+   * Project overlay
+   * ------------------------------------------------------------------- */
+  function openProjectOverlay(i) {
+    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const p = projectData[i];
+    const ov = document.getElementById('overlay');
+    document.getElementById('overlay-title').textContent = p.title;
+    document.getElementById('overlay-eyebrow').textContent = `${String(i + 1).padStart(2, '0')} — ${p.category}`;
+    document.getElementById('overlay-desc').textContent = descriptions[i];
+    document.getElementById('ov-cat').textContent = p.category;
+    document.getElementById('ov-year').textContent = p.year;
+    document.getElementById('ov-status').textContent = p.status;
+    document.getElementById('ov-pos').textContent = `${i + 1} of ${projectCount}`;
+    const hero = document.getElementById('overlay-hero');
+    hero.style.background = makeThumbBackground(p, i);
+    ov.classList.add('open');
+    ov.setAttribute('aria-hidden', 'false');
+    setTimeout(() => document.getElementById('overlay-close').focus(), 80);
+  }
+
+  function closeProjectOverlay() {
+    const ov = document.getElementById('overlay');
+    ov.classList.remove('open');
+    ov.setAttribute('aria-hidden', 'true');
+    if (lastFocusedElement && document.contains(lastFocusedElement)) {
+      lastFocusedElement.focus();
+    }
+  }
+
+  function trapOverlayFocus(e) {
+    const ov = document.getElementById('overlay');
+    if (!ov.classList.contains('open')) return;
+    if (e.key === 'Escape') {
+      closeProjectOverlay();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(ov.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+      .filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  document.getElementById('overlay-close').addEventListener('click', closeProjectOverlay);
+  document.getElementById('overlay').addEventListener('click', (e) => {
+    if (e.target.dataset.close) closeProjectOverlay();
+  });
+  addEventListener('keydown', trapOverlayFocus);
+
+  /* ---------------------------------------------------------------------
+   * Mouse parallax
+   * ------------------------------------------------------------------- */
+  addEventListener('pointermove', (e) => {
+    const nextMouseX = (e.clientX / innerWidth - 0.5) * 2;
+    const nextMouseY = (e.clientY / innerHeight - 0.5) * 2;
+    if (Math.abs(nextMouseX - targetMouseX) > MOUSE_EPS || Math.abs(nextMouseY - targetMouseY) > MOUSE_EPS) {
+      targetMouseX = nextMouseX;
+      targetMouseY = nextMouseY;
+      invalidate();
+    }
+  }, { passive: true });
+
+  /* ---------------------------------------------------------------------
+   * Boot
+   * ------------------------------------------------------------------- */
+  function cacheUIRefs() {
+    uiRefs.progressNum = document.getElementById('progress-num');
+    uiRefs.progressBar = document.getElementById('progress-bar');
+    uiRefs.hero = document.querySelector('.hero');
+    uiRefs.scrollHint = document.getElementById('scroll-hint');
+  }
+
+  function boot() {
+    try {
+      currentResponsiveMode = applyResponsiveSizing();
+      cacheUIRefs();
+      initScene();
+      createHelix();
+      createParticles();
+      createProjectCards();
+      createMiniNav();
+      addEventListener('scroll', updateScroll, { passive: true });
+      addEventListener('resize', handleResize, { passive: true });
+      document.addEventListener('visibilitychange', () => {
+        isPageVisible = !document.hidden;
+        if (isPageVisible) {
+          invalidate();
+        } else if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = 0;
+          renderActive = false;
+        }
+      });
+      updateScroll();
+      window.__helixBooted = true;
+      invalidate();
+    } catch (err) {
+      console.error('Helix init failed:', err);
+      document.getElementById('fallback').classList.add('show');
+    }
+  }
+
+  // WebGL availability gate
+  function webglOK() {
+    try {
+      const c = document.createElement('canvas');
+      return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+    } catch (e) { return false; }
+  }
+
+  if (!webglOK()) {
+    document.getElementById('fallback').classList.add('show');
+  } else {
+    boot();
+  }
+  </script>
+</body>
+</html>

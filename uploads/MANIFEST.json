@@ -1,0 +1,22 @@
+[
+  {
+    "path": "FRONTEND_AUDIT_FIXING_PLAN.md",
+    "bytes": 6773,
+    "sha256": "b71f778306b6f210ca496a8ad70d37038931c109a5c788427617ce8d3d01aaf4"
+  },
+  {
+    "path": "Helix Projects.optimized.html",
+    "bytes": 47374,
+    "sha256": "d1d46bc35e780c73395f86090a7e4f09316c2428f1372f31c40edf096163b3ff"
+  },
+  {
+    "path": "MANIFEST.json",
+    "bytes": 459,
+    "sha256": "fb04e974d21a0455ce7fbc8f0eee3b5adc41a01374dabf96cf8b65309fecae66"
+  },
+  {
+    "path": "performance-fixes.diff",
+    "bytes": 23829,
+    "sha256": "4f82ed961224b8498141046f4d3ef2536969d0bebb02a50cd41ee170eee203b2"
+  }
+]
