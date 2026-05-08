@@ -1,8 +1,10 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { createBrotliCompress, createGzip } from 'node:zlib';
 import { extname, isAbsolute, join, normalize, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pipeline } from 'node:stream';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const publicDir = resolve(__dirname, 'public');
@@ -54,9 +56,26 @@ async function resolveStaticFile(pathname) {
 
   const finalStat = await stat(filePath).catch(() => null);
   if (finalStat?.isFile() && isInsidePublicDir(filePath)) {
-    return { filePath, size: finalStat.size };
+    return { filePath, size: finalStat.size, mtimeMs: finalStat.mtimeMs };
   }
 
+  return null;
+}
+
+
+function etagFor(filePath, size, mtimeMs) {
+  return `W/"${Buffer.from(`${relative(publicDir, filePath)}:${size}:${Math.trunc(mtimeMs)}`).toString('base64url')}"`;
+}
+
+function isCompressible(contentType) {
+  return /^(text\/|application\/(javascript|json))|image\/svg\+xml/.test(contentType);
+}
+
+function negotiatedEncoding(req, contentType, size) {
+  if (req.method === 'HEAD' || size < 1024 || !isCompressible(contentType)) return null;
+  const accepted = req.headers['accept-encoding'] || '';
+  if (accepted.includes('br')) return 'br';
+  if (accepted.includes('gzip')) return 'gzip';
   return null;
 }
 
@@ -98,18 +117,42 @@ async function handleRequest(req, res) {
   const filePath = staticFile?.filePath || fallbackFile;
   const fallbackStat = staticFile ? null : await stat(fallbackFile).catch(() => null);
   const size = staticFile?.size ?? fallbackStat?.size;
+  const mtimeMs = staticFile?.mtimeMs ?? fallbackStat?.mtimeMs;
 
-  if (size == null) {
+  if (size == null || mtimeMs == null) {
     return sendText(res, 404, 'Not Found');
   }
 
-  res.writeHead(200, {
-    'content-type': mimeTypes.get(extname(filePath)) || 'application/octet-stream',
-    'content-length': size,
+  const contentType = mimeTypes.get(extname(filePath)) || 'application/octet-stream';
+  const etag = etagFor(filePath, size, mtimeMs);
+
+  if (req.headers['if-none-match'] === etag) {
+    res.writeHead(304, {
+      'cache-control': cacheHeader(filePath),
+      etag,
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'strict-origin-when-cross-origin'
+    });
+    return res.end();
+  }
+
+  const encoding = negotiatedEncoding(req, contentType, size);
+  const headers = {
+    'content-type': contentType,
     'cache-control': cacheHeader(filePath),
+    etag,
+    vary: 'Accept-Encoding',
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'strict-origin-when-cross-origin'
-  });
+  };
+
+  if (encoding) {
+    headers['content-encoding'] = encoding;
+  } else {
+    headers['content-length'] = size;
+  }
+
+  res.writeHead(200, headers);
 
   if (req.method === 'HEAD') {
     return res.end();
@@ -123,7 +166,17 @@ async function handleRequest(req, res) {
       res.destroy(error);
     }
   });
-  stream.pipe(res);
+
+  if (!encoding) {
+    return stream.pipe(res);
+  }
+
+  const compressor = encoding === 'br' ? createBrotliCompress() : createGzip();
+  pipeline(stream, compressor, res, (error) => {
+    if (error && !res.destroyed) {
+      res.destroy(error);
+    }
+  });
 }
 
 const server = createServer((req, res) => {
