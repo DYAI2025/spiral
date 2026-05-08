@@ -1,0 +1,14 @@
+{
+  "name": "spiral-railway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Railway-ready static deployment for the Helix Projects spatial gallery.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  }
+}
