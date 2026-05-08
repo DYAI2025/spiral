@@ -73,9 +73,58 @@ function isCompressible(contentType) {
 
 function negotiatedEncoding(req, contentType, size) {
   if (req.method === 'HEAD' || size < 1024 || !isCompressible(contentType)) return null;
-  const accepted = req.headers['accept-encoding'] || '';
-  if (accepted.includes('br')) return 'br';
-  if (accepted.includes('gzip')) return 'gzip';
+
+  const header = req.headers['accept-encoding'];
+  if (!header) return null;
+
+  // Parse Accept-Encoding into a map of { encoding: qValue }
+  const encodingQualities = Object.create(null);
+  for (const part of header.split(',')) {
+    const [rawEncoding, ...params] = part.split(';');
+    const encoding = rawEncoding.trim().toLowerCase();
+    if (!encoding) continue;
+
+    let q = 1;
+    for (const param of params) {
+      const [key, value] = param.split('=').map(s => s.trim());
+      if (key === 'q' && value !== undefined) {
+        const parsed = Number(value);
+        if (!Number.isNaN(parsed)) q = parsed;
+        break;
+      }
+    }
+
+    encodingQualities[encoding] = q;
+  }
+
+  const getQ = (encoding) => {
+    const key = encoding.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(encodingQualities, key)) {
+      return encodingQualities[key];
+    }
+    // '*' wildcard applies to any encoding except 'identity'
+    if (key !== 'identity' && Object.prototype.hasOwnProperty.call(encodingQualities, '*')) {
+      return encodingQualities['*'];
+    }
+    if (key === 'identity') {
+      // identity is 1.0 by default unless explicitly overridden
+      return Object.prototype.hasOwnProperty.call(encodingQualities, 'identity')
+        ? encodingQualities['identity']
+        : 1;
+    }
+    return 0;
+  };
+
+  const brQ = getQ('br');
+  const gzipQ = getQ('gzip');
+
+  // Respect q=0 (explicitly disabled) and return null if neither is acceptable
+  if (brQ <= 0 && gzipQ <= 0) return null;
+
+  // Prefer the encoding with higher q; prefer br on a tie
+  if (brQ >= gzipQ && brQ > 0) return 'br';
+  if (gzipQ > 0) return 'gzip';
+
   return null;
 }
 
