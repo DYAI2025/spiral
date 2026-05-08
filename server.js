@@ -115,7 +115,15 @@ async function handleRequest(req, res) {
     return res.end();
   }
 
-  createReadStream(filePath).pipe(res);
+  const stream = createReadStream(filePath);
+  stream.on('error', (error) => {
+    if (!res.headersSent) {
+      sendText(res, 500, 'Internal Server Error');
+    } else {
+      res.destroy(error);
+    }
+  });
+  stream.pipe(res);
 }
 
 const server = createServer((req, res) => {
