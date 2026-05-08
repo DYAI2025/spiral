@@ -1328,9 +1328,24 @@
     if (animationId) cancelAnimationFrame(animationId);
     animationId = 0;
     renderActive = false;
+
+    const overlay = document.getElementById('overlay');
+    const fallback = document.getElementById('fallback');
+    const activeElement = document.activeElement;
+    const focusWasInsideOverlay = !!(overlay && activeElement instanceof HTMLElement && overlay.contains(activeElement));
+
     document.body.classList.remove('overlay-open');
-    document.getElementById('overlay')?.classList.remove('open');
+    overlay?.classList.remove('open');
+    overlay?.setAttribute('aria-hidden', 'true');
+
     window.__showHelixFallback();
+
+    if (focusWasInsideOverlay && fallback instanceof HTMLElement) {
+      if (!fallback.hasAttribute('tabindex')) {
+        fallback.setAttribute('tabindex', '-1');
+      }
+      fallback.focus();
+    }
   }
 
   const webglCanvas = document.getElementById('webgl');
