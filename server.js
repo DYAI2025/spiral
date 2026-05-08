@@ -71,7 +71,12 @@ async function handleRequest(req, res) {
     return sendText(res, 400, 'Bad Request');
   }
 
-  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  let url;
+  try {
+    url = new URL(req.url, 'http://localhost');
+  } catch {
+    return sendText(res, 400, 'Bad Request');
+  }
 
   if (url.pathname === '/healthz') {
     return sendText(res, 200, 'ok', { 'cache-control': 'no-store' });
